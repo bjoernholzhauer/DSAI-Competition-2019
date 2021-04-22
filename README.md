@@ -43,3 +43,37 @@ There are three main model training programs, each of which trained one of the m
 * `get_orphan.R`: Uses additional data (i.e. in addition to the main merged file) provided by competition organizers in order to obtain information on orphan drug status.
 * `features_bjoern.R`: Feature engineering and data wrangling on a drug-indication level
 * `feat_bjoern_trial.R`: Feature engineering and data wrangling at the individual trial level (produces `feat_bjoern_trial.csv`)
+
+# How can you look at the fitted models?
+
+Here is some code that shows how you can inspect the fitted models. The code below assumes that you have create a project (or otherwise specified your project directory) and that the relevant files are stored in this directory. Then you can use the [`here` R package](https://cran.r-project.org/web/packages/here/index.html) as shown below.
+```
+library(tidyverse)
+library(here)
+library(rstanarm)
+library(xgboost)
+library(glmnet)
+
+# Load fitted Bayesian logistic regression
+sglmerfit = read_rds(here("sglmerfit1b.rds"))
+summary(sglmerfit)
+prior_summary(sglmerfit) # Or: sglmerfit$prior.info
+plot(sglmerfit)
+
+# Load fitted xgboost models:
+xgb1 = read_rds(here("xgb_trials2_7jan2020.rds"))
+xgb2 = read_rds(here("xgb_trials3_10jan2020.rds"))
+# Show features with highest Gain feature importance for one model
+as_tibble(xgb.importance(model = xgb1)) %>%
+  mutate(ordervar = 1:n(),
+         Feature = ordered(Feature, levels=rev(Feature))) %>%
+  filter(ordervar<=10) %>%
+  ggplot(aes(y=Gain, x=Feature)) +
+  geom_bar(stat="identity") +
+  coord_flip()
+
+# Load fitted ridge regression models that take out-of-fold predictions
+# of the xgboost models as inputs:
+ridge1 = read_rds(here("xgboost_meta_avg2_7jan2020.rds"))
+ridge2 = read_rds(here("xgboost_meta_avg3_10jan2020.rds"))
+```
